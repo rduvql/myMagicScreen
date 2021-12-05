@@ -25,7 +25,7 @@ module.exports = function (config) {
       suppressAll: true // removes the duplicated traces
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, './coverage/myMagicMirror'),
+      dir: require('path').join(__dirname, './coverage/myMagicScreen'),
       subdir: '.',
       reporters: [
         { type: 'html' },

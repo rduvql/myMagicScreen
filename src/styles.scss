@@ -1,1 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Vibur&display=swap');
+
 /* You can add global styles to this file, and also import other style files */
+$background-color: #000;
+
+$color-dimmed: #666;
+$color-default: #999;
+$color-bright: #fff;
+
+$font-weight-thin: 300;
+$font-weight-default: 400;
+$font-weight-bold: 500;
+
+$font-size-small: 0.9em;
+$font-size-default: 1.1em;
+$font-size-large: 3.3em;
+
+$line-height: 1.1em;
+
+$main-margin: 40px;
+
+.absolute100 {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+a, a:visited {
+    color: $color-bright;
+}
+
+html, body {
+    @extend .absolute100;
+    margin: 0;
+    padding: 0;
+    color: $color-default;
+    background-color: $background-color;
+    font-size: $font-size-default;
+    font-weight: $font-weight-default;
+    font-family: "Roboto Condensed", sans-serif;
+    line-height: $line-height;
+    overflow: hidden;
+    // cursor: none;
+}
+
+#main {
+    position: absolute;
+    width: calc(100% - (#{$main-margin} * 2));
+    height: calc(100% - (#{$main-margin} * 2));
+    margin: $main-margin;
+}
+
+#fullpage-wrapper {
+    @extend .absolute100;
+    background-color: transparent;
+
+    .fullpage-inner {
+        @extend #fullpage-wrapper;
+        margin: $main-margin;
+    }
+}
+
+.fullpage {
+    @extend .absolute100;
+    background-color: $background-color;
+    z-index: 9999;
+}
+
+/**
+* colors.
+*/
+.dimmed { color: $color-dimmed; }
+.bright { color: $color-bright; }
+
+/**
+* front-size.
+*/
+.small {
+    font-size: $font-size-small;
+    line-height: $line-height;
+}
+.large {
+    font-size: $font-size-large;
+    line-height: $line-height;
+}
+
+/**
+* font family
+*/
+.thin { font-weight: $font-weight-thin; }
+.bold { font-weight: $font-weight-bold; }
+
+.aright { text-align: right; }
+.aleft { text-align: left; }
+
+sup {
+    font-size: 40%;
+    line-height: 40%;
+}
+
+/**
+* Region Definitions.
+*/
+.region {
+    position: absolute;
+
+    &.bar {
+        width: 100%;
+        text-align: center;
+    }
+
+    &.left {
+        left: 0;
+        text-align: left;
+    }
+
+    &.right {
+        right: 0;
+        text-align: right;
+    }
+
+    &.center,
+    &.center {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    &.top {
+        top: 0;
+
+        &.left,
+        &.center,
+        &.right {
+            top: 100%;
+        }
+    }
+
+    &.third {
+        width: 100%;
+        text-align: center;
+        transform: translateY(-50%);
+
+        &.upper { top: 33%; }
+        &.middle { top: 50%; }
+        &.lower { top: 66%; }
+    }
+
+    &.bottom {
+        bottom: 0;
+
+        &.left,
+        &.center,
+        &.right {
+            bottom: 100%;
+        }
+    }
+}

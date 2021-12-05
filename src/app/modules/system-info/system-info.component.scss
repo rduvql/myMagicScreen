@@ -1,0 +1,11 @@
+progress {
+    background-color: #000;
+    height: 0.5em;
+    margin-bottom: 0.2em;
+    border: 1px solid white;
+}
+
+
+progress::-moz-progress-bar {
+    background-color: #fff !important;
+}

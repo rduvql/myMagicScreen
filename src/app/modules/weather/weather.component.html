@@ -1,0 +1,35 @@
+<!--
+color:       dimmed < bright
+font-size:   small < large
+font-weight: thin < bold
+-->
+<div>
+    <div *ngIf="current" id="current" class="header small">
+        <span class="bright large"> {{ current.temp }} </span> 
+        <span class="bold">°C</span>
+
+        <span class="dimmed"> | </span>
+
+        <span class="bright"> {{ current.humidity }} </span> 
+        <span class="dimmed small bold"> % </span>
+    </div>
+
+    <div *ngIf="forecast">
+        <table id="forecast">
+            <tr *ngFor="let cast of forecast; let i = index">
+                <td *ngFor="let weather of cast; let y = index" class="small" style="padding-right: 8px;">
+    
+                    <div class="dimmed"> {{ getForecastHour(weather.dtMillis) }}h </div>
+
+                    <div>
+                        {{ weather.temp }}°
+                    </div>
+
+                    <span class="bright wi {{ getWeatherIcon(weather.icon) }}"></span>
+    
+                </td>
+            </tr>
+            <tr style="height: 16px;"></tr>
+        </table>
+    </div>
+</div>

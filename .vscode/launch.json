@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+
+    "version": "0.2.0",
+
+    "configurations": [
+        {
+            "name": "attach:server",
+            "address": "localhost",
+            "port": 9229,
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node"
+        },
+        {
+            "name": "attach:front",
+            "type": "firefox",
+            "request": "attach",
+            "url": "http://localhost",
+            "pathMappings": [
+                {
+                    "url": "webpack:///src",
+                    "path": "${workspaceFolder}/src"
+                }
+            ],
+            "preLaunchTask": "firefox-dev"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server/Client",
+            "configurations": ["attach:server", "attach:front"]
+            // "preLaunchTask": "${defaultBuildTask}"
+        }
+    ]
+}

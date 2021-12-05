@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+        {
+            "isBackground": true,
+            "label": "firefox-dev",
+            "type": "process",
+            "command": "C:/myPrograms/firefox-dev/firefox.exe",
+            "args": ["-start-debugger-server", "-devtools", "localhost:4200"],
+            "problemMatcher": []
+        },
+        {
+            "label": "start dev server",
+            "type": "shell",
+            "command": "npm run dev:server",
+            "presentation": {
+              "reveal": "always",
+              "panel": "new",
+              "group": "develop",
+            },
+            "runOptions": { "runOn": "folderOpen" },
+          },
+          {
+            "label": "start ng serve",
+            "type": "shell",
+            "command": "cd ./src && npm run dev:front",
+            "presentation": {
+              "reveal": "always",
+              "panel": "new",
+              "group": "develop",
+            },
+            "runOptions": { "runOn": "folderOpen" }
+          }
+    ]
+}

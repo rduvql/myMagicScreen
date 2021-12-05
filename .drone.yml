@@ -1,0 +1,392 @@
+---
+kind: pipeline
+type: exec
+name: push_pipeline
+
+trigger:
+  event:
+    - push
+  branch:
+    - feat/*
+    - deps/*
+    - master
+
+clone:
+  disable: true
+
+steps:
+
+  # CLONE
+  - name: CLONE
+    environment:
+      GITEA_TOKEN:
+        from_secret: GITEA_TOKEN
+    commands:
+      - env | sort
+      # needs $$ => because of double expansion, during pipeline execution command will be $GITEA_TOKEN
+      - git clone --depth 1 --no-single-branch $(echo $DRONE_GIT_HTTP_URL | sed "s/gitea/vm:$$GITEA_TOKEN@gitea/") . 
+      - git checkout "$DRONE_COMMIT"
+
+
+  # INSTALL
+  - name: INSTALL
+    depends_on:
+      - CLONE
+    commands:
+      - pnpm install --store-dir /apps/runner/cache/pnpm-store/ --network-concurrency 8
+
+
+  # TESTS
+  - name: TESTS_FRONT
+    depends_on:
+      - INSTALL
+    when:
+      branch:
+        - feat/*
+        - deps/*
+    commands:
+      - echo $CI_COMMIT_MESSAGE | grep -i skip_tests && echo "skipping tests" && exit 0
+      - pnpm run test:front
+
+
+  - name: TESTS_SERVER
+    depends_on:
+      - INSTALL
+    when:
+      branch:
+        - feat/*
+        - deps/*
+    commands:
+      - echo $CI_COMMIT_MESSAGE | grep -i skip_tests && echo "skipping tests" && exit 0
+      - pnpm run test:server
+
+
+  # BUILDS
+  - name: BUILD_FRONT
+    depends_on:
+      - TESTS_FRONT
+    when:
+      branch:
+        - feat/*
+        - deps/*
+        - master
+    commands:
+      - pnpm run build:front
+
+
+  - name: BUILD_SERVER
+    depends_on:
+      - TESTS_SERVER
+    when:
+      branch:
+        - feat/*
+        - deps/*
+        - master
+    commands:
+      - pnpm run build:server
+
+
+  # PACKAGE feat/
+  - name: PACKAGE_FEAT
+    environment:
+      OWM_API_KEY:
+        from_secret: OWM_API_KEY
+    depends_on:
+      - BUILD_FRONT
+      - BUILD_SERVER
+    when:
+      branch:
+        - feat/*
+    commands:
+      - PACKAGE_APP_NAME=$(jq -r '.name' < package.json)
+      - IMAGE_NAME=rdu/$PACKAGE_APP_NAME/$DRONE_BRANCH
+      - IMAGE_NAME_DASHED=$(echo $IMAGE_NAME | tr '/' '-')
+      - RAND_PORT=$( echo $(( $(od -vAn -N2 -tu2 < /dev/urandom) % ( 64000 - 20000 ) + 20000 )) ) #od => convert urandom into 2 bytes unsined int. max: 64000, min: 20000
+      - echo $RAND_PORT
+      - docker build --tag="$IMAGE_NAME" .
+      - docker rm -f $IMAGE_NAME_DASHED 2>/dev/null
+      - docker run
+        --env OWM_API_KEY=$$OWM_API_KEY
+        --name $IMAGE_NAME_DASHED
+        --network apps_default
+        --restart unless-stopped
+        --publish $RAND_PORT:8080
+        --detach
+        --label com.centurylinklabs.watchtower.enable=false
+        $IMAGE_NAME
+      # - PROJECT_NAME_SHORT=$(jq -r '.name | split("-") | map(.[0:1]) | join("")' < package.json) # mmm
+      # - BRANCH_DASHED=$(echo $DRONE_BRANCH | tr '/' '-') # feat-branch (from feat/branch)
+      # - NGINX_FILENAME="$PROJECT_NAME_SHORT-$BRANCH_DASHED" # mmm-feat-branch
+      # - sed -i "s/__SUBDOMAIN__/$NGINX_FILENAME/g" ./nginx/no_ssl.nginx.conf
+      # - sed -i "s/__PORT__/$RAND_PORT/g" ./nginx/no_ssl.nginx.conf
+
+
+  # PACKAGE master
+  - name: PACKAGE_MASTER
+    depends_on:
+      - BUILD_FRONT
+      - BUILD_SERVER
+    when:
+      branch:
+        - master
+    commands:
+      - V_MAJOR=$(jq '.version | split(".")[0] | tonumber' < package.json)
+      - V_MINOR=$(jq '.version | split(".")[1] | tonumber' < package.json)
+      - V_PATCH=$(jq '.version | split(".")[2] | tonumber' < package.json)
+      - APP_NAME=$(jq -r '.name' < package.json)
+      - docker build
+        --tag="rdu/$APP_NAME:$V_MAJOR"
+        --tag="rdu/$APP_NAME:$V_MAJOR.$V_MINOR"
+        --tag="rdu/$APP_NAME:$V_MAJOR.$V_MINOR.$V_PATCH" .
+
+
+############################################################
+#
+# PR pipeline (targeting master)
+#
+############################################################
+---
+kind: pipeline
+type: exec
+name: pull_request_pipeline
+
+trigger:
+  event:
+    - pull_request
+  branch:
+    - master
+
+clone:
+  disable: true
+
+steps:
+
+  # CLONE
+  - name: CLONE
+    environment:
+      GITEA_TOKEN:
+        from_secret: GITEA_TOKEN
+    commands:
+      - env | sort
+      - git clone --depth 30 --no-single-branch $(echo $DRONE_GIT_HTTP_URL | sed "s/gitea/vm:$$GITEA_TOKEN@gitea/") . 
+      - git checkout "$DRONE_COMMIT"
+
+
+  # SECURITY
+  - name: NPM_AUDIT
+    depends_on:
+      - CLONE
+    commands:
+      - pnpm audit --json --audit-level moderate |
+        jq ".advisories | to_entries | .[].value | {
+          module_name:.module_name,
+          severity:.severity,
+          findings:.findings,
+          vulnerable_versions:.vulnerable_versions,
+          patched_versions:.patched_versions }"
+
+
+  - name: ZAP
+    depends_on:
+      - CLONE
+    commands:
+      - echo TODO ZAP
+
+
+  # LINTS
+  - name: HADOLINT
+    depends_on:
+      - CLONE
+    commands:
+      - /apps/runner/bin/hadolint -c .hadolint.yaml Dockerfile
+
+
+  - name: SHELLCHECK
+    depends_on:
+      - CLONE
+    commands:
+      - /apps/runner/bin/shellcheck --severity warning ci/*.sh
+
+
+  - name: ESLINT
+    depends_on:
+      - CLONE
+    commands:
+      - echo TODO eslint
+
+
+  # OTHERS
+  - name: SEMGREP
+    depends_on:
+      - CLONE
+    commands:
+      - echo TODO semgrep
+
+
+  - name: GITLEAKS
+    depends_on:
+      - CLONE
+    commands:
+      - /apps/runner/bin/gitleaks detect
+
+
+############################################################
+#
+# TAG pipeline (targeting master)
+#
+############################################################
+---
+kind: pipeline
+type: exec
+name: tag_pipeline
+
+trigger:
+  event:
+    - tag
+  branch:
+    - master
+
+clone:
+  disable: true
+
+steps:
+
+  # CLONE
+  - name: CLONE
+    environment:
+      GITEA_TOKEN:
+        from_secret: GITEA_TOKEN
+    commands:
+      - env | sort
+      - git clone --depth 1 --no-single-branch $(echo $DRONE_GIT_HTTP_URL | sed "s/gitea/vm:$$GITEA_TOKEN@gitea/") . 
+      # - git checkout "$DRONE_COMMIT"
+
+
+
+
+
+
+
+
+
+# trigger:
+#   event:
+#     - push || pull_request || tag || promote || rollback
+#   branch:
+#     - pattern/*
+#
+# steps:
+# - name: example steps
+#   depends_on:
+#     - another_step
+#   failure: ignore # step is optional
+#   detach: true # execute the pipeline step in the background, immediately proceeds to the next step (to start a service or daemon)
+#   commands:
+#     - my_command
+#   when:
+#     branch:
+#       - master
+#     event:
+#       - push
+#     ref:
+#       - refs/heads/master
+
+
+# exit code 78: exit the pipeline with a success status and skip all subsequent steps
+
+
+# CI
+# CI_BUILD_CREATED
+# CI_BUILD_EVENT
+# CI_BUILD_FINISHED
+# CI_BUILD_LINK
+# CI_BUILD_NUMBER
+# CI_BUILD_STARTED
+# CI_BUILD_STATUS
+# CI_BUILD_TARGET
+# CI_COMMIT_AUTHOR
+# CI_COMMIT_AUTHOR_AVATAR
+# CI_COMMIT_AUTHOR_EMAIL
+# CI_COMMIT_AUTHOR_NAME
+# CI_COMMIT_BRANCH
+# CI_COMMIT_MESSAGE
+# CI_COMMIT_REF
+# CI_COMMIT_SHA
+# CI_PARENT_BUILD_NUMBER
+# CI_REMOTE_URL
+# CI_REPO
+# CI_REPO_LINK
+# CI_REPO_NAME
+# CI_REPO_PRIVATE
+# CI_REPO_REMOTE
+
+# DRONE
+# DRONE_BRANCH
+# DRONE_BUILD_ACTION
+# DRONE_BUILD_CREATED
+# DRONE_BUILD_EVENT
+# DRONE_BUILD_FINISHED
+# DRONE_BUILD_LINK
+# DRONE_BUILD_NUMBER
+# DRONE_BUILD_PARENT
+# DRONE_BUILD_STARTED
+# DRONE_BUILD_STATUS
+# DRONE_COMMIT
+# DRONE_COMMIT_AFTER
+# DRONE_COMMIT_AUTHOR
+# DRONE_COMMIT_AUTHOR_AVATAR
+# DRONE_COMMIT_AUTHOR_EMAIL
+# DRONE_COMMIT_AUTHOR_NAME
+# DRONE_COMMIT_BEFORE
+# DRONE_COMMIT_BRANCH
+# DRONE_COMMIT_LINK
+# DRONE_COMMIT_MESSAGE
+# DRONE_COMMIT_REF
+# DRONE_COMMIT_SHA
+# DRONE_DEPLOY_TO
+# DRONE_GIT_HTTP_URL
+# DRONE_GIT_SSH_URL
+# DRONE_HOME
+# DRONE_REMOTE_URL
+# DRONE_REPO
+# DRONE_REPO_BRANCH
+# DRONE_REPO_LINK
+# DRONE_REPO_NAME
+# DRONE_REPO_NAMESPACE
+# DRONE_REPO_OWNER
+# DRONE_REPO_PRIVATE
+# DRONE_REPO_SCM
+# DRONE_REPO_VISIBILITY
+# DRONE_SOURCE_BRANCH
+# DRONE_STAGE_ARCH
+# DRONE_STAGE_DEPENDS_ON
+# DRONE_STAGE_FINISHED
+# DRONE_STAGE_KIND
+# DRONE_STAGE_MACHINE
+# DRONE_STAGE_NAME
+# DRONE_STAGE_NUMBER
+# DRONE_STAGE_OS
+# DRONE_STAGE_STARTED
+# DRONE_STAGE_STATUS
+# DRONE_STAGE_TYPE
+# DRONE_STAGE_VARIANT
+# DRONE_STEP_NAME
+# DRONE_STEP_NUMBER
+# DRONE_SYSTEM_HOST
+# DRONE_SYSTEM_HOSTNAME
+# DRONE_SYSTEM_PROTO
+# DRONE_SYSTEM_VERSION
+# DRONE_TARGET_BRANCH
+# DRONE_WORKSPACE
+
+# GIT_AUTHOR_EMAIL
+# GIT_AUTHOR_NAME
+# GIT_COMMITTER_EMAIL
+# GIT_COMMITTER_NAME
+# GIT_TERMINAL_PROMPT
+
+# HOME
+# HOMEPATH
+# PATH
+# PWD
+# USERPROFILE

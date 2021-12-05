@@ -1,0 +1,13 @@
+{
+    "peacock.color": "#661919",
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#8f2323",
+        "activityBar.activeBorder": "#061a06",
+        "activityBar.background": "#8f2323",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#061a06",
+        "activityBarBadge.foreground": "#e7e7e7"
+    },
+    "task.allowAutomaticTasks": "on"
+}

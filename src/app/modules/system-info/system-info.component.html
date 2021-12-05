@@ -1,0 +1,5 @@
+<div *ngFor="let fsdata of fsSizes">
+
+    <span> {{ fsdata.fs }} </span>
+    <progress value="{{ fsdata.use }}" max="{{ 100 }}"></progress>
+</div>

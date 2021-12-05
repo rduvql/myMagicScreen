@@ -1,0 +1,15 @@
+# only fail if severity > info
+failure-threshold: info
+
+# override:
+#   error:
+#     - ""
+#   warning:
+#     - ""
+#   info:
+#     - ""
+#   style:
+#     - ""
+
+# ignored:
+#   - DL3045
