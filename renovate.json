@@ -23,7 +23,8 @@
         },
         {
             "groupName": "deps/major",
-            "matchUpdateTypes": ["major"]
+            "matchUpdateTypes": ["major"],
+            "automerge": false
         }
     ]
     

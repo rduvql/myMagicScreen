@@ -120,6 +120,8 @@ steps:
       # - sed -i "s/__SUBDOMAIN__/$NGINX_FILENAME/g" ./nginx/no_ssl.nginx.conf
       # - sed -i "s/__PORT__/$RAND_PORT/g" ./nginx/no_ssl.nginx.conf
 
+      # docker save -o __file__.tar __image__name__
+      # docker load -i __file__.tar
 
   # PACKAGE master
   - name: PACKAGE_MASTER
